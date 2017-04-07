@@ -28,31 +28,35 @@ router.post("/code", function (req, res) {
 	var testFile = path.join(__dirname, "..", "test", exercise);
 
 	fs.readFile(testFile, function (err, test) {
+		if(err) {
+	        res.send({ "error": err });
+	    }
+	    
 		if (!fs.existsSync(userDir)){
 		    fs.mkdirSync(userDir);
 		}
 		
-		fs.writeFileSync(userFile, code + "\n\n" + test, function(err) {
+		fs.writeFile(userFile, code + "\n\n" + test, function(err) {
 		    if(err) {
-		        return console.log(err);
+		        res.send({ "error": err });
 		    }
+
+		    mocha.addFile(userFile);
+
+			mocha
+				.run()
+			    .on("test end", function(test) {
+			    	var testResponse = {
+			    		title: test.title,
+			    		state: test.state,
+			    		err: (test.err) ? test.err : null
+			    	};
+			        results.push(testResponse);
+			    })
+			    .on("end", function() {
+		 			res.json({ "results": results });
+			    });
 		}); 
-
-		mocha.addFile(userFile);
-
-		mocha
-			.run()
-		    .on("test end", function(test) {
-		    	var testResponse = {
-		    		title: test.title,
-		    		state: test.state,
-		    		err: (test.err) ? test.err : null
-		    	};
-		        results.push(testResponse);
-		    })
-		    .on("end", function() {
-	 			res.json({ "results": results });
-		    });
 	});
 });
 
